@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -7,10 +8,16 @@ import plotly.express as px
 import pydeck as pdk
 import streamlit as st
 
-from app.api.main import methodology
-from app.data.cities import CITIES, City
-from app.services.risk_service import RiskService
-from app.services.weather import WeatherService
+# Streamlit Cloud executes this nested file directly, so add the repository root
+# before importing the application package.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.api.main import methodology  # noqa: E402
+from app.data.cities import CITIES, City  # noqa: E402
+from app.services.risk_service import RiskService  # noqa: E402
+from app.services.weather import WeatherService  # noqa: E402
 
 st.set_page_config(page_title="HeatGuard AI Uzbekistan", page_icon="☀️", layout="wide")
 
