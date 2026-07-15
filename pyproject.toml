@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "heatguard-ai"
+version = "0.1.0"
+description = "Explainable extreme-heat intelligence for Uzbekistan"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "pydantic>=2.8,<3",
+  "pydantic-settings>=2.4,<3",
+  "httpx>=0.27,<1",
+  "pandas>=2.2,<3",
+  "numpy>=1.26,<3",
+  "scikit-learn>=1.5,<2",
+  "xgboost>=2.1,<4",
+  "lightgbm>=4.5,<5",
+  "joblib>=1.4,<2",
+  "streamlit>=1.37,<2",
+  "plotly>=5.23,<7",
+  "pydeck>=0.9,<1",
+]
+
+[project.optional-dependencies]
+earth-engine = ["earthengine-api>=1.1,<2"]
+dev = ["pytest>=8.3,<9", "ruff>=0.6,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

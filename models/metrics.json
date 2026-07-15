@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-07-15T08:04:25.951250+00:00",
+  "dataset": {
+    "source": "Open-Meteo Historical Weather API; static demo geospatial context",
+    "target": "documented baseline-v1 rule score",
+    "rows": 13152,
+    "training_rows": 8760,
+    "validation_rows": 4392,
+    "validation_start": "2024-12-31T14:00:00",
+    "split": "held-out newest 365 days"
+  },
+  "models": {
+    "random_forest": {
+      "mae": 0.4814,
+      "rmse": 0.6499,
+      "r2": 0.9982
+    },
+    "xgboost": {
+      "mae": 0.236,
+      "rmse": 0.327,
+      "r2": 0.9995
+    },
+    "lightgbm": {
+      "mae": 0.2502,
+      "rmse": 0.3455,
+      "r2": 0.9995
+    }
+  },
+  "selected_model": "xgboost",
+  "selection_rule": "lowest validation RMSE; LightGBM is not preferred unless it wins",
+  "classification": {
+    "accuracy": 0.9779,
+    "macro_f1": 0.7819,
+    "labels": [
+      "Safe",
+      "Moderate",
+      "High",
+      "Very High",
+      "Extreme"
+    ],
+    "confusion_matrix": [
+      [
+        1091,
+        16,
+        0,
+        0,
+        0
+      ],
+      [
+        43,
+        1935,
+        7,
+        0,
+        0
+      ],
+      [
+        0,
+        18,
+        1014,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        11,
+        255,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    ]
+  },
+  "feature_importance": {
+    "temperature_2m": 0.23998,
+    "relative_humidity_2m": 0.00619,
+    "apparent_temperature": 0.69339,
+    "wind_speed_10m": 0.00695,
+    "shortwave_radiation": 0.00451,
+    "land_surface_temperature_c": 0.0317,
+    "ndvi": 0.00715,
+    "elevation_m": 0.0062,
+    "built_up_fraction": 0.00013,
+    "latitude": 0.00012,
+    "longitude": 0.00314,
+    "day_of_year_sin": 0.00028,
+    "day_of_year_cos": 0.00027
+  },
+  "shap": "Not generated in the minimal runtime; tree feature importance is included."
+}
