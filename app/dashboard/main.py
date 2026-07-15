@@ -59,7 +59,7 @@ TEXT = {
 }
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=120, show_spinner=False)
 def load_risks() -> list[dict]:
     async def gather() -> list[dict]:
         service = RiskService()
@@ -69,7 +69,7 @@ def load_risks() -> list[dict]:
     return asyncio.run(gather())
 
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=120, show_spinner=False)
 def load_forecast(city_slug: str) -> dict:
     city = next(item for item in CITIES if item.slug == city_slug)
     return asyncio.run(WeatherService().forecast(city)).model_dump(mode="json")
@@ -163,6 +163,10 @@ st.markdown(
 language = st.sidebar.segmented_control("Language / Til", options=["en", "uz"], default="en")
 t = TEXT[language]
 selected_city = st.sidebar.selectbox(t["city"], CITIES, format_func=lambda city: city_label(city, language))
+if st.sidebar.button("Refresh live data", width="stretch"):
+    load_risks.clear()
+    load_forecast.clear()
+    st.rerun()
 st.sidebar.caption("HeatGuard AI · baseline v1")
 
 st.markdown('<div class="hero"><div class="eyebrow">Climate decision support</div></div>', unsafe_allow_html=True)
@@ -189,6 +193,14 @@ with tabs[0]:
 with tabs[1]:
     st.subheader(f"{t['current']} · {city_label(selected_city, language)}")
     render_metrics(selected_risk)
+    weather = selected_risk["weather"]
+    if not weather["is_live"]:
+        st.error(
+            "Live Open-Meteo data is currently unavailable. The weather values above are an offline "
+            "demonstration and are NOT current observations. Use 'Refresh live data' to retry."
+        )
+    else:
+        st.caption(f"Live source: {weather['source']} · observed {weather['observed_at']}")
     geo = selected_risk["geospatial"]
     if geo["is_demo"]:
         st.warning(t["demo"])

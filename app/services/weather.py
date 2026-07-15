@@ -21,24 +21,42 @@ class WeatherService:
         self.settings = settings or get_settings()
         self._cache: dict[str, tuple[datetime, WeatherResponse]] = {}
 
+    async def _request_json(self, params: dict[str, str | float | int]) -> dict:
+        """Request Open-Meteo with a retry for transient cloud/network failures."""
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient(
+                    timeout=self.settings.request_timeout_seconds,
+                    follow_redirects=True,
+                    headers={"User-Agent": "HeatGuard-AI-Uzbekistan/0.1"},
+                ) as client:
+                    response = await client.get(self.settings.open_meteo_base_url, params=params)
+                    response.raise_for_status()
+                    return response.json()
+            except (httpx.HTTPError, ValueError) as exc:
+                last_error = exc
+                if attempt < 2:
+                    await asyncio.sleep(0.75 * (attempt + 1))
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Open-Meteo request failed without an error")
+
     async def current(self, city: City) -> WeatherResponse:
         cached = self._cache.get(city.slug)
         now = datetime.now(UTC)
         if cached and (now - cached[0]).total_seconds() < self.settings.cache_ttl_seconds:
             return cached[1]
         try:
-            async with httpx.AsyncClient(timeout=self.settings.request_timeout_seconds) as client:
-                response = await client.get(
-                    self.settings.open_meteo_base_url,
-                    params={
-                        "latitude": city.latitude,
-                        "longitude": city.longitude,
-                        "current": CURRENT_VARS,
-                        "timezone": "Asia/Tashkent",
-                    },
-                )
-                response.raise_for_status()
-                current = response.json()["current"]
+            payload = await self._request_json(
+                {
+                    "latitude": city.latitude,
+                    "longitude": city.longitude,
+                    "current": CURRENT_VARS,
+                    "timezone": "Asia/Tashkent",
+                }
+            )
+            current = payload["current"]
             result = WeatherResponse(
                 city=city.slug,
                 observed_at=current["time"],
@@ -54,7 +72,9 @@ class WeatherService:
         except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
             logger.warning("Weather request failed for %s: %s", city.slug, exc)
             result = demo_weather(city, now)
-        self._cache[city.slug] = (now, result)
+        # Do not lock a transient failure into the service cache.
+        if result.is_live:
+            self._cache[city.slug] = (now, result)
         return result
 
     async def current_all(self, cities: tuple[City, ...]) -> list[WeatherResponse]:
@@ -63,19 +83,16 @@ class WeatherService:
     async def forecast(self, city: City, hours: int = 48) -> ForecastResponse:
         now = datetime.now(UTC)
         try:
-            async with httpx.AsyncClient(timeout=self.settings.request_timeout_seconds) as client:
-                response = await client.get(
-                    self.settings.open_meteo_base_url,
-                    params={
-                        "latitude": city.latitude,
-                        "longitude": city.longitude,
-                        "hourly": HOURLY_VARS,
-                        "forecast_days": 3,
-                        "timezone": "Asia/Tashkent",
-                    },
-                )
-                response.raise_for_status()
-                hourly = response.json()["hourly"]
+            payload = await self._request_json(
+                {
+                    "latitude": city.latitude,
+                    "longitude": city.longitude,
+                    "hourly": HOURLY_VARS,
+                    "forecast_days": 3,
+                    "timezone": "Asia/Tashkent",
+                }
+            )
+            hourly = payload["hourly"]
             points = []
             geo = fallback_features(city, None)
             for i, time in enumerate(hourly["time"][:hours]):
